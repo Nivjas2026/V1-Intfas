@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6d5dfc">
+<meta name="description" content="FastFlow intermittent fasting tracker">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="FastFlow">
+<title>FastFlow • Fasting Tracker</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div id="toast" class="toast" aria-live="polite"></div>
+<header class="topbar">
+  <div><div class="brand">FastFlow <span>✦</span></div><div id="todayLabel" class="muted"></div></div>
+  <button id="themeBtn" class="icon-btn" aria-label="Toggle dark mode">☾</button>
+</header>
+
+<main class="app-shell">
+<section id="dashboard" class="page active">
+  <div class="hero-card">
+    <div class="hero-top"><span id="phasePill" class="pill">Ready</span><button id="editPlanBtn" class="ghost-btn">Change plan</button></div>
+    <div class="ring-wrap">
+      <svg class="progress-ring" viewBox="0 0 220 220">
+        <circle class="ring-track" cx="110" cy="110" r="92"></circle>
+        <circle id="ringProgress" class="ring-progress" cx="110" cy="110" r="92"></circle>
+      </svg>
+      <div class="ring-content"><div id="timer" class="timer">16:00:00</div><div id="progressText" class="muted">0% complete</div></div>
+    </div>
+    <div id="heroTitle" class="hero-title">Ready for your next fast?</div>
+    <div id="windowText" class="muted center">Choose a plan and start when you're ready.</div>
+    <div class="action-row"><button id="startBtn" class="primary-btn">Start fast</button><button id="endBtn" class="secondary-btn hidden">End fast</button></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><span>🔥 Streak</span><strong id="streakValue">0 days</strong></div>
+    <div class="stat-card"><span>🏆 Completed</span><strong id="completedValue">0</strong></div>
+    <div class="stat-card"><span>⚖️ Current weight</span><strong id="currentWeight">—</strong></div>
+    <div class="stat-card"><span>😴 Last sleep</span><strong id="lastSleep">—</strong></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Today's plan</h2><button id="settingsBtn" class="text-btn">Edit</button></div>
+    <div class="plan-row">
+      <div><span class="label">Fasting</span><strong id="fastPlan">16 hours</strong></div>
+      <div><span class="label">Eating</span><strong id="eatPlan">8 hours</strong></div>
+      <div><span class="label">Schedule</span><strong id="scheduleText">16:8</strong></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Quick log</h2></div>
+    <div class="quick-grid">
+      <button class="quick-btn" data-go="weight">⚖️<span>Weight</span></button>
+      <button class="quick-btn" data-go="sleep">😴<span>Sleep</span></button>
+      <button class="quick-btn" data-go="history">📅<span>History</span></button>
+      <button class="quick-btn" id="notifyQuick">🔔<span>Notifications</span></button>
+    </div>
+  </div>
+</section>
+
+<section id="history" class="page">
+  <div class="page-head"><h1>History</h1><span id="historyCount" class="pill"></span></div>
+  <div id="historyList" class="list"></div>
+  <div id="emptyHistory" class="empty card">No completed fasts yet. Your first one gets the party started. 🎉</div>
+</section>
+
+<section id="weight" class="page">
+  <div class="page-head"><h1>Weight</h1></div>
+  <div class="card">
+    <div class="form-grid">
+      <label>Current weight (kg)<input id="weightInput" type="number" min="20" max="300" step="0.1" placeholder="e.g. 75"></label>
+      <label>Goal weight (kg)<input id="goalWeightInput" type="number" min="20" max="300" step="0.1" placeholder="Optional"></label>
+    </div>
+    <button id="saveWeightBtn" class="primary-btn full">Save weight</button>
+  </div>
+  <div class="card"><div class="card-head"><h2>Progress</h2></div><div id="weightSummary" class="summary"></div><div class="chart-wrap"><canvas id="weightChart" width="700" height="280"></canvas></div></div>
+  <div class="card"><div class="card-head"><h2>Entries</h2></div><div id="weightList" class="list"></div></div>
+</section>
+
+<section id="sleep" class="page">
+  <div class="page-head"><h1>Sleep</h1></div>
+  <div class="card">
+    <div class="form-grid">
+      <label>Sleep duration (hours)<input id="sleepHours" type="number" min="0" max="24" step="0.1" placeholder="e.g. 7.5"></label>
+      <label>Sleep quality<select id="sleepQuality"><option>Great</option><option>Good</option><option selected>Okay</option><option>Poor</option></select></label>
+    </div>
+    <label>Notes<textarea id="sleepNotes" rows="3" placeholder="Optional"></textarea></label>
+    <button id="saveSleepBtn" class="primary-btn full">Save sleep</button>
+  </div>
+  <div class="card"><div class="card-head"><h2>Recent sleep</h2></div><div id="sleepList" class="list"></div></div>
+</section>
+
+<section id="settings" class="page">
+  <div class="page-head"><h1>Settings</h1></div>
+  <div class="card"><h2>Fasting plan</h2><div id="scheduleChoices" class="choice-grid"></div>
+    <label id="customLabel" class="custom-label hidden">Custom fasting hours<input id="customFastHours" type="number" min="1" max="23" value="16"></label>
+    <button id="savePlanBtn" class="primary-btn full">Save plan</button>
+  </div>
+  <div class="card"><div class="setting-row"><div><strong>Notifications</strong><div class="muted">Fasting milestone reminders.</div></div><button id="notificationBtn" class="secondary-btn">Allow</button></div></div>
+  <div class="card safety-card"><h2>Gentle reminder</h2><p>FastFlow is a tracking tool, not medical advice. Fasting is not suitable for everyone. If you are pregnant or breastfeeding, under 18, have a history of an eating disorder, have a medical condition, or take medicines affected by food timing, talk with a qualified clinician before fasting.</p></div>
+  <button id="resetBtn" class="danger-btn full">Reset all app data</button>
+</section>
+</main>
+
+<nav class="bottom-nav">
+<button data-page="dashboard" class="nav-item active">⌂<span>Today</span></button>
+<button data-page="history" class="nav-item">▣<span>History</span></button>
+<button data-page="weight" class="nav-item">⚖<span>Weight</span></button>
+<button data-page="sleep" class="nav-item">☾<span>Sleep</span></button>
+<button data-page="settings" class="nav-item">⚙<span>Settings</span></button>
+</nav>
+
+<div id="installBanner" class="install-banner hidden"><div><strong>Install FastFlow</strong><div class="muted">Keep your fasting tracker on your home screen.</div></div><button id="installBtn" class="primary-btn small">Install</button><button id="dismissInstall" class="icon-btn">×</button></div>
+<script src="./app.js"></script>
+</body>
+</html>
