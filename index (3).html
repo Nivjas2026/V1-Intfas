@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>FastTrack</title>
+<style>
+:root{--bg:#f4f6f5;--card:#fff;--tx:#14201d;--mu:#6b7c77;--ac:#0f766e;--ac2:#d1fae5;--bd:#e2e8e6;--rd:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1513;--card:#17211e;--tx:#e8f0ed;--mu:#8fa39d;--ac:#2dd4bf;--ac2:#134e4a;--bd:#263531}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif;padding:env(safe-area-inset-top) 0 calc(64px + env(safe-area-inset-bottom))}
+main{max-width:560px;margin:auto;padding:12px}
+.c{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu)}
+.big{font-size:32px;font-weight:700}.mu{color:var(--mu);font-size:13px}
+.bar{height:8px;background:var(--bd);border-radius:6px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--ac)}
+input,select,button,textarea{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:9px;width:100%}
+button{background:var(--ac);color:#fff;border:0;font-weight:600;cursor:pointer}button.g{background:var(--ac2);color:var(--tx)}button.r{background:var(--rd)}
+.row{display:flex;gap:8px;margin:6px 0;align-items:center}.row>*{flex:1;min-width:0}
+.li{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--bd)}.li:first-of-type{border-top:0}
+.li small{color:var(--mu);display:block}.li button{width:auto;padding:4px 9px;margin-left:4px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom)}
+nav button{background:none;color:var(--mu);border-radius:0;padding:10px 2px;font-size:11px}nav button.on{color:var(--ac)}
+nav span{display:block;font-size:18px}
+.sv{width:100%;height:120px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}.dy{padding:6px 0;border-radius:8px;background:var(--bg);font-size:13px;cursor:pointer}.dy.sl{outline:2px solid var(--ac)}.dy em{display:block;font-style:normal;font-size:10px;min-height:12px}label input{margin-top:4px}
+</style></head><body><main id="app"></main><nav id="nav"></nav>
+<script>
+const K='fasttrack.v1',T=[['home','🏠','Home'],['fast','⏱️','Fast'],['food','🍛','Food'],['move','🏋️','Move'],['prog','📊','Progress'],['hist','📅','History'],['set','⚙️','Settings']];
+const D={goals:{cal:1600,pro:100,steps:10000,water:2500,wt:0,fast:16,wk:4,sleep:8},fast:null,fasts:[],food:[],lib:[],ex:[],steps:{},wt:[],water:{},notes:{},rec:[],meas:[],sleep:{}};
+let S;try{S=Object.assign({},D,JSON.parse(localStorage.getItem(K)||'{}'));S.goals=Object.assign({},D.goals,S.goals)}catch(e){S=structuredClone(D)}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id),v=id=>$(id).value,n=id=>+v(id)||0;
+const td=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const pct=(a,b)=>Math.min(100,b?a/b*100:0),r=x=>Math.round(x*10)/10;
+const hm=ms=>{ms=Math.max(0,ms)/6e4|0;return (ms/60|0)+'h '+String(ms%60).padStart(2,'0')+'m'};
+const bar=(a,b,l,u)=>`<div class="row" style="margin:10px 0 0"><b>${l}</b><span style="text-align:right">${r(a)} / ${b} ${u}</span></div><div class="bar"><i style="width:${pct(a,b)}%"></i></div>`;
+let tab='home';
+const sum=k=>S.food.filter(f=>f.d==td()).reduce((a,f)=>a+(+f[k]||0),0);
+function streak(){let c=0;const ok=new Set(S.fasts.filter(f=>f.e-f.s>=f.plan*36e5*.95).map(f=>new Date(f.e-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10)));let d=new Date();if(!ok.has(td()))d.setDate(d.getDate()-1);for(;;){const s=new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);if(!ok.has(s))break;c++;d.setDate(d.getDate()-1)}return c}
+function fastCard(){const f=S.fast;if(!f)return `<div class="big">Eating window</div><div class="mu">No active fast</div>`;const el=Date.now()-f.s,tot=f.plan*36e5;return `<div class="big">${hm(el)}</div><div class="bar"><i style="width:${pct(el,tot)}%"></i></div><div class="mu">${el>=tot?'Goal reached 🎉':hm(tot-el)+' remaining'} · ${f.plan}h fast</div>`}
+function view(){const g=S.goals,t=td();let h='';
+if(tab=='home'){const w=S.wt.at(-1),wk=S.ex.filter(e=>Date.now()-new Date(e.d)<6048e5).map(e=>e.d).filter((x,i,a)=>a.indexOf(x)==i).length;
+h=`<div class="c"><h2>🔥 Fasting</h2><div id="fc">${fastCard()}</div><div class="row"><button onclick="tab='fast';render()">${S.fast?'Manage fast':'Start a fast'}</button></div></div>
+<div class="c"><h2>Today</h2>${bar(sum('cal'),g.cal,'🍛 Calories','kcal')}${bar(sum('p'),g.pro,'🥩 Protein','g')}${bar(S.steps[t]||0,g.steps,'🚶 Steps','')}${bar(S.water[t]||0,g.water,'💧 Water','ml')}${S.sleep[t]?bar(S.sleep[t].h,g.sleep,'😴 Sleep','h'):''}
+<div class="row"><button class="g" onclick="tab='food';render()">+ Meal</button><button class="g" onclick="tab='move';render()">+ Workout</button><button class="g" onclick="tab='prog';render()">+ Weight</button></div></div>
+<div class="c"><h2>Snapshot</h2><div class="li"><span>⚖️ Weight</span><b>${w?w.v+' kg':'—'}</b></div><div class="li"><span>🏋️ Workout days (7d)</span><b>${wk} / ${g.wk}</b></div><div class="li"><span>🔥 Fast streak</span><b>${streak()} days</b></div></div>
+<div class="c"><h2>📝 Note</h2><textarea id="nt" rows="2" placeholder="How did today feel?" onchange="S.notes['${t}']=this.value;save()">${S.notes[t]||''}</textarea></div>`}
+if(tab=='fast'){const done=S.fasts.filter(f=>f.e-f.s>=f.plan*36e5*.95),all=S.fasts,avg=all.length?all.reduce((a,f)=>a+f.e-f.s,0)/all.length:0,lg=all.reduce((a,f)=>Math.max(a,f.e-f.s),0);
+h=`<div class="c"><h2>Timer</h2><div id="fc">${fastCard()}</div>${S.fast?'<div class="row"><button onclick="endFast()">End fast</button><button class="g" onclick="cancelFast()">Cancel</button></div>':`<div class="row"><select id="pl">${[12,14,16,18,20].map(p=>`<option value="${p}" ${p==g.fast?'selected':''}>${p}:${24-p}</option>`).join('')}<option value="c">Custom…</option></select><button onclick="startFast()">Start</button></div>`}</div>
+<div class="c"><h2>Stats</h2><div class="li"><span>Completed fasts</span><b>${done.length}</b></div><div class="li"><span>Ended early</span><b>${all.length-done.length}</b></div><div class="li"><span>Longest</span><b>${hm(lg)}</b></div><div class="li"><span>Average</span><b>${hm(avg)}</b></div><div class="li"><span>Streak</span><b>${streak()} days</b></div></div>
+<div class="c"><h2>History</h2>${[...S.fasts].reverse().slice(0,20).map(f=>`<div class="li"><span>${new Date(f.s).toLocaleDateString()}<small>${f.plan}h plan</small></span><b>${hm(f.e-f.s)} ${f.e-f.s>=f.plan*36e5*.95?'🟢':'🟡'}</b></div>`).join('')||'<div class="mu">Nothing yet</div>'}</div>`}
+if(tab=='food'){const L=S.food.filter(f=>f.d==t);
+h=`<div class="c"><h2>Add food</h2>${S.lib.length?`<select id="lb" onchange="pick()"><option value="">My Foods…</option>${S.lib.map((f,i)=>`<option value="${i}">${f.name} · ${f.cal} kcal</option>`).join('')}</select>`:''}
+<div class="row"><input id="fn" placeholder="Food name"><input id="fq" placeholder="Qty (250 g)"></div>
+<div class="row"><input id="fk" type="number" placeholder="kcal"><input id="fp" type="number" placeholder="Protein g"></div>
+<div class="row"><input id="fc2" type="number" placeholder="Carbs g"><input id="ff" type="number" placeholder="Fat g"></div>
+<div class="row"><select id="fm">${['Breakfast','Lunch','Dinner','Snack','Pre-workout','Post-workout','Other'].map(m=>`<option>${m}</option>`).join('')}</select><label class="mu"><input type="checkbox" id="fl" style="width:auto"> save to My Foods</label></div>
+<button onclick="addFood()">Add</button></div>
+<div class="c"><h2>Today · ${Math.round(sum('cal'))} kcal</h2><div class="mu">P ${r(sum('p'))}g · C ${r(sum('c'))}g · F ${r(sum('f'))}g</div>${L.map(f=>`<div class="li"><span>${f.name} ${f.q||''}<small>${f.m} · ${f.t} ${inWin(f.ts)}</small></span><span><b>${f.cal}</b> <button class="g" onclick="editFood(${f.id})">✎</button><button class="r" onclick="delFood(${f.id})">×</button></span></div>`).join('')||'<div class="mu">No meals logged</div>'}</div>`}
+if(tab=='move'){h=`<div class="c"><h2>Log exercise</h2><input id="en" placeholder="Exercise (Squats)"><div class="row"><input id="es" type="number" placeholder="Sets"><input id="er" type="number" placeholder="Reps"><input id="ew" type="number" placeholder="kg"></div><div class="row"><input id="ed" type="number" placeholder="Minutes (optional)"><button onclick="addEx()">Add</button></div>
+${S.ex.filter(e=>e.d==t).map((e,i)=>`<div class="li"><span>${e.name}<small>${e.s?e.s+'×'+e.r:''}${e.w?' × '+e.w+' kg':''}${e.m?' · '+e.m+' min':''}</small></span><button class="r" onclick="S.ex.splice(S.ex.indexOf(S.ex.filter(x=>x.d=='${t}')[${i}]),1);save();render()">×</button></div>`).join('')}</div>
+<div class="c"><h2>Steps · ${S.steps[t]||0}</h2><div class="row"><input id="st" type="number" placeholder="Today's steps" value="${S.steps[t]||''}"><button onclick="S.steps['${t}']=n('st');save();render()">Save</button></div><div class="mu">≈ ${r((S.steps[t]||0)*.0007)} km</div></div>
+<div class="c"><h2>Water · ${S.water[t]||0} ml</h2><div class="row"><button class="g" onclick="wat(250)">+250</button><button class="g" onclick="wat(500)">+500</button><button class="g" onclick="wat(-250)">−250</button></div></div>`}
+if(tab=='prog'){const W=S.wt.slice(-30),p=W.map(x=>x.v),mn=Math.min(...p),mx=Math.max(...p),pts=p.map((y,i)=>`${p.length>1?i/(p.length-1)*300:150},${105-(mx==mn?50:(y-mn)/(mx-mn)*90)}`).join(' ');
+h=`<div class="c"><h2>Weight</h2><div class="row"><input id="wv" type="number" step=".1" placeholder="kg"><button onclick="addW()">Log</button></div>${p.length?`<div class="big">${p.at(-1)} kg</div><div class="mu">${p.length>1?'Change '+r(p.at(-1)-p.at(-2))+' kg since last':''}${g.wt?' · goal '+g.wt+' kg':''}</div><svg class="sv" viewBox="0 0 300 120" preserveAspectRatio="none"><polyline fill="none" stroke="var(--ac)" stroke-width="2.5" points="${pts}"/></svg>`:'<div class="mu">No entries</div>'}</div>
+<div class="c"><h2>Last 7 days</h2>${wkRows()}</div>`}
+if(tab=='set'){h=`<div class="c"><h2>Goals</h2>${[['cal','Calories / day'],['pro','Protein g / day'],['steps','Steps / day'],['water','Water ml / day'],['wt','Goal weight kg'],['fast','Fasting hours'],['wk','Workout days / week'],['sleep','Sleep goal h']].map(([k,l])=>`<div class="row"><span>${l}</span><input type="number" value="${g[k]}" onchange="S.goals.${k}=+this.value;save()"></div>`).join('')}</div>
+<div class="c"><h2>Data (stored only on this device)</h2><div class="row"><button class="g" onclick="dl('json')">Backup JSON</button><button class="g" onclick="dl('csv')">Export CSV</button></div><div class="row"><input type="file" id="im" accept=".json" onchange="imp(this)"></div><button class="r" onclick="if(confirm('Delete ALL data?')){localStorage.removeItem(K);location.reload()}">Delete all data</button>
+<p class="mu">No account, no servers. Nothing leaves your phone. Exercise calories aren't subtracted from food.</p></div>`}
+if(tab=='food')h+=recCard();if(tab=='move')h+=sleepCard();if(tab=='prog')h+=measCard();if(tab=='hist')h=histView();return h}
+function inWin(ts){const f=S.fasts.find(x=>ts>=x.s&&ts<=x.e)||(S.fast&&ts>=S.fast.s?S.fast:null);return f?'🔴 fasting':'🟢 eating'}
+function wkRows(){let o='';for(let i=0;i<7;i++){const d=new Date(Date.now()-i*864e5-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10),F=S.food.filter(f=>f.d==d);o+=`<div class="li"><span>${d.slice(5)}</span><span class="mu">${Math.round(F.reduce((a,f)=>a+f.cal,0))} kcal · ${Math.round(F.reduce((a,f)=>a+f.p,0))}g P · ${S.steps[d]||0} steps${S.ex.some(e=>e.d==d)?' · 🏋️':''}</span></div>`}return o}
+function startFast(){let p=n('pl')||+v('pl');if(v('pl')=='c'){p=+prompt('Fasting hours?','16');if(!p)return}S.fast={s:Date.now(),plan:p};S.goals.fast=p;save();render()}
+function endFast(){S.fasts.push({...S.fast,e:Date.now()});S.fast=null;save();render()}
+function cancelFast(){if(confirm('Discard this fast?')){S.fast=null;save();render()}}
+function pick(){const f=S.lib[v('lb')];if(!f)return;$('fn').value=f.name;$('fk').value=f.cal;$('fp').value=f.p;$('fc2').value=f.c;$('ff').value=f.f}
+function addFood(){if(!v('fn'))return;const f={id:Date.now(),d:td(),ts:Date.now(),t:new Date().toTimeString().slice(0,5),name:v('fn'),q:v('fq'),cal:n('fk'),p:n('fp'),c:n('fc2'),f:n('ff'),m:v('fm')};S.food.push(f);if($('fl').checked)S.lib.push({name:f.name,cal:f.cal,p:f.p,c:f.c,f:f.f});save();render()}
+function editFood(id){const f=S.food.find(x=>x.id==id),a=prompt('Calories',f.cal);if(a===null)return;f.cal=+a||0;f.p=+prompt('Protein g',f.p)||0;f.q=prompt('Quantity',f.q||'')||'';save();render()}
+function delFood(id){S.food=S.food.filter(x=>x.id!=id);save();render()}
+function addEx(){if(!v('en'))return;S.ex.push({d:td(),name:v('en'),s:n('es'),r:n('er'),w:n('ew'),m:n('ed')});save();render()}
+function wat(x){S.water[td()]=Math.max(0,(S.water[td()]||0)+x);save();render()}
+function addW(){if(!n('wv'))return;S.wt=S.wt.filter(x=>x.d!=td());S.wt.push({d:td(),v:n('wv')});S.wt.sort((a,b)=>a.d<b.d?-1:1);save();render()}
+function dl(t){let s,m='application/json',x='json';if(t=='csv'){m='text/csv';x='csv';s='date,meal,food,qty,kcal,protein,carbs,fat\n'+S.food.map(f=>[f.d,f.m,`"${f.name}"`,`"${f.q||''}"`,f.cal,f.p,f.c,f.f].join(',')).join('\n')}else s=JSON.stringify(S,null,1);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:m}));a.download='fasttrack-'+td()+'.'+x;a.click()}
+function imp(el){const rd=new FileReader();rd.onload=()=>{try{S=Object.assign({},D,JSON.parse(rd.result));save();render()}catch(e){alert('Invalid file')}};el.files[0]&&rd.readAsText(el.files[0])}
+function render(){$('app').innerHTML=view();$('nav').innerHTML=T.map(([k,i,l])=>`<button class="${k==tab?'on':''}" onclick="tab='${k}';render()"><span>${i}</span>${l}</button>`).join('');if(pt!=tab){scrollTo(0,0);pt=tab}}
+setInterval(()=>{const e=$('fc');if(e&&S.fast)e.innerHTML=fastCard()},30000);
+
+let pt,dr=[],rn0='',rw0='',cm=new Date(),sel=td();const M=['waist','hip','chest','arm','thigh'];
+const dk=ts=>new Date(ts-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10),esc=x=>String(x).replace(/"/g,'&quot;');
+const okF=()=>S.fasts.filter(f=>f.e-f.s>=f.plan*36e5*.95);
+function bestStreak(){let b=0,c=0,p=null;[...new Set(okF().map(f=>dk(f.e)))].sort().forEach(d=>{c=p&&new Date(d)-new Date(p)==864e5?c+1:1;b=Math.max(b,c);p=d});return b}
+function recCard(){const t=k=>dr.reduce((a,x)=>a+x[k],0);return `<div class="c"><h2>🍲 My Recipes</h2>${S.rec.map((x,i)=>`<div class="li"><span>${x.name}<small>${r(x.cal/x.wt*100)} kcal · ${r(x.p/x.wt*100)} g P per 100 g · ${x.wt} g batch</small></span><span><button onclick="logRec(${i})">Log</button><button class="r" onclick="S.rec.splice(${i},1);save();render()">×</button></span></div>`).join('')||'<div class="mu">No recipes yet</div>'}
+<h2 style="margin-top:14px">New recipe</h2><input id="rn" placeholder="Recipe name" value="${esc(rn0)}">${dr.map((x,i)=>`<div class="li"><span>${x.name} · ${x.g} g<small>${x.cal} kcal · P ${x.p} · C ${x.c} · F ${x.f}</small></span><button class="r" onclick="dr.splice(${i},1);render()">×</button></div>`).join('')}
+<div class="row"><input id="ing" placeholder="Ingredient"><input id="ig" type="number" placeholder="grams"></div><div class="row"><input id="ik" type="number" placeholder="kcal (for this amount)"><input id="ip" type="number" placeholder="P g"></div><div class="row"><input id="ic" type="number" placeholder="Carbs g"><input id="iff" type="number" placeholder="Fat g"></div>
+<button class="g" onclick="addIng()">+ Add ingredient</button><div class="mu" style="margin:6px 0">Total ${Math.round(t('cal'))} kcal · P ${r(t('p'))} g · ${t('g')} g raw</div><div class="row"><input id="rw" type="number" placeholder="Cooked weight g (optional)" value="${rw0}"><button onclick="saveRec()">Save recipe</button></div></div>`}
+function addIng(){rn0=v('rn');rw0=v('rw');if(!v('ing'))return;dr.push({name:v('ing'),g:n('ig'),cal:n('ik'),p:n('ip'),c:n('ic'),f:n('iff')});render()}
+function saveRec(){rn0=v('rn');if(!dr.length||!rn0)return;const t=k=>dr.reduce((a,x)=>a+x[k],0);S.rec.push({name:rn0,wt:n('rw')||t('g')||1,cal:t('cal'),p:t('p'),c:t('c'),f:t('f')});dr=[];rn0=rw0='';save();render()}
+function logRec(i){const x=S.rec[i],g=+prompt('Grams eaten?','200');if(!g)return;const k=g/x.wt;S.food.push({id:Date.now(),d:td(),ts:Date.now(),t:new Date().toTimeString().slice(0,5),name:x.name,q:g+' g',cal:Math.round(x.cal*k),p:r(x.p*k),c:r(x.c*k),f:r(x.f*k),m:v('fm')});save();render()}
+function sleepCard(){const s=S.sleep[td()];return `<div class="c"><h2>😴 Sleep${s?' · '+hm(s.h*36e5):''}</h2><div class="row"><label class="mu">Bedtime<input id="sb" type="time" value="${s?s.bed:'23:00'}"></label><label class="mu">Wake-up<input id="sw" type="time" value="${s?s.wake:'07:00'}"></label></div><button onclick="saveSleep()">Save last night</button><div class="mu" style="margin-top:6px">Goal ${S.goals.sleep} h</div></div>`}
+function saveSleep(){const a=v('sb').split(':'),b=v('sw').split(':');if(a.length<2||b.length<2)return;S.sleep[td()]={bed:v('sb'),wake:v('sw'),h:(((+b[0])*60+(+b[1])-(+a[0])*60-(+a[1]))+1440)%1440/60};save();render()}
+function lt(k){const a=S.meas.filter(x=>x[k]);return[a.length?a[a.length-1][k]:0,a.length>1?a[a.length-2][k]:0]}
+function measCard(){return `<div class="c"><h2>📏 Measurements (cm)</h2>${M.map(k=>{const[a,b]=lt(k);return `<div class="row"><span style="text-transform:capitalize">${k}<small class="mu"> ${a?a+' cm'+(b?' ('+(a>b?'+':'')+r(a-b)+')':''):''}</small></span><input id="m_${k}" type="number" step=".1" placeholder="cm"></div>`}).join('')}<button onclick="addM()">Log measurements</button></div>`}
+function addM(){const o={d:td()};let y=0;M.forEach(k=>{const x=n('m_'+k);if(x){o[k]=x;y=1}});if(!y)return;const e=S.meas.find(x=>x.d==td());e?Object.assign(e,o):S.meas.push(o);save();render()}
+function info(k){const F=S.fasts.filter(f=>dk(f.e)==k),fo=S.food.filter(f=>f.d==k),sm=q=>fo.reduce((a,f)=>a+(+f[q]||0),0);return{fs:F.length?(F.some(f=>f.e-f.s>=f.plan*36e5*.95)?'🟢':'🟡'):'',fm:F.reduce((a,f)=>Math.max(a,f.e-f.s),0),cal:sm('cal'),p:sm('p'),st:S.steps[k]||0,wo:S.ex.filter(e=>e.d==k),wt:(S.wt.find(x=>x.d==k)||{}).v,sl:S.sleep[k],wa:S.water[k]||0,nt:S.notes[k]||''}}
+function histView(){const y=cm.getFullYear(),m=cm.getMonth(),f0=new Date(y,m,1).getDay(),nd=new Date(y,m+1,0).getDate();let g='';for(let i=0;i<f0;i++)g+='<i></i>';for(let d=1;d<=nd;d++){const k=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'),I=info(k);g+=`<div class="dy${k==sel?' sl':''}" onclick="sel='${k}';render()">${d}<em>${I.fs}${I.wo.length?'💪':''}</em></div>`}
+const I=info(sel),L=(a,b)=>`<div class="li"><span>${a}</span><b>${b}</b></div>`;
+return `<div class="c"><div class="row"><button class="g" onclick="cm=new Date(cm.getFullYear(),cm.getMonth()-1,1);render()">‹</button><b style="text-align:center">${cm.toLocaleString('default',{month:'long',year:'numeric'})}</b><button class="g" onclick="cm=new Date(cm.getFullYear(),cm.getMonth()+1,1);render()">›</button></div><div class="cal mu">${'SMTWTFS'.split('').map(x=>`<span>${x}</span>`).join('')}</div><div class="cal">${g}</div><div class="mu" style="margin-top:8px">🟢 fast completed · 🟡 ended early · 💪 workout</div></div>
+<div class="c"><h2>${sel}</h2>${L('⏱️ Fasting',I.fm?hm(I.fm):'—')}${L('🍛 Calories',Math.round(I.cal)+' kcal')}${L('🥩 Protein',Math.round(I.p)+' g')}${L('🚶 Steps',I.st)}${L('🏋️ Workout',I.wo.length?I.wo.map(e=>e.name).join(', '):'—')}${L('⚖️ Weight',I.wt?I.wt+' kg':'—')}${L('😴 Sleep',I.sl?hm(I.sl.h*36e5):'—')}${L('💧 Water',I.wa+' ml')}${I.nt?L('📝 Note',I.nt):''}</div>`+achCard()}
+function achCard(){const g=S.goals,W=S.wt,days=[...new Set(S.food.map(f=>f.d))],A=[['🌱','First completed fast',okF().length,1],['🔥','7-day fasting streak',bestStreak(),7],['⏱️','20 fasts completed',okF().length,20],['🏋️','10 workout days',new Set(S.ex.map(e=>e.d)).size,10],['🥩','Protein goal, 5 days',days.filter(d=>S.food.filter(f=>f.d==d).reduce((a,f)=>a+f.p,0)>=g.pro).length,5],['🚶','Step goal, 7 days',Object.values(S.steps).filter(x=>x>=g.steps).length,7],['📖','Meals logged on 7 days',days.length,7],['😴','Sleep goal, 5 nights',Object.values(S.sleep).filter(x=>x.h>=g.sleep).length,5],['📉','2 kg toward goal weight',W.length>1&&g.wt?Math.max(0,(W[0].v-W[W.length-1].v)*Math.sign(W[0].v-g.wt)):0,2]];
+return `<div class="c"><h2>🏅 Achievements</h2>${A.map(([i,l,c,t])=>`<div class="li"><span style="flex:1">${i} ${l}<div class="bar"><i style="width:${pct(c,t)}%"></i></div></span><b>${c>=t?'🏅':Math.min(r(c),t)+'/'+t}</b></div>`).join('')}</div>`}
+render();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
